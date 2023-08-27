@@ -34,6 +34,7 @@ so, i (PeurPioche) made a quick little launcher for it, so no more hassle of usi
 - ~~Fix the error calling lines that somehow got their `details` property have the same properties they have~~
 - Add the comments
 - Make the code cleaner
+- Set the `true` and `false` values to be non-string
 
 # CREDITS
 Thanks to CodePulse and tylerlaceby for the tutorials!
