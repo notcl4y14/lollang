@@ -1,7 +1,7 @@
 So, if you see this, ya prob wanna test the language.
 So its pretty damn straightforward.
 
--------------------------------------------------------------------[VERY IMPORTANT NOTE]----------------------------------------------------------------------------
+-----------------------------[VERY IMPORTANT NOTE]------------------------------
 This was made in lua for windows, so if you're a linux or mac user... well, idk how it works fo finding the directory and all but you still have to type
 "lua main.lua [filename].wick" once you found it.
 
