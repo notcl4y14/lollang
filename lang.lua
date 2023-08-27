@@ -248,6 +248,11 @@ function lang_Node_NumericLiteral(value, pos)
 	return node
 end
 
+function lang_Node_StringLiteral(value, pos)
+	local node = lang_Node("StringLiteral", {value = value}, pos)
+	return node
+end
+
 function lang_Node_NullLiteral(pos)
 	local node = lang_Node("NullLiteral", {}, pos)
 	return node
@@ -406,6 +411,10 @@ function lang_Parser(tokens)
 			elseif token.type == "Number" then
 				self:yum()
 				return lang_Node_NumericLiteral(token.value, token.pos)
+
+			elseif token.type == "String" then
+				self:yum()
+				return lang_Node_StringLiteral(token.value, token.pos)
 
 			elseif token.type == "BinOp" then
 				self:yum()
@@ -763,7 +772,16 @@ function lang_run(filename, code)
 	end
 
 	for _, node in pairs(ast.body) do
-		print(_, node.type, node.value, node.name, node.left, node.operator, node.right, node.identifier, node.value)
+		print(
+			"TYPE:" .. tostring(node.type) .. ",  " ..
+			"VALUE:" .. tostring(node.value) .. ",  " ..
+			"NAME:" .. tostring(node.name) .. ",  " ..
+			"LEFT:" .. tostring(node.left) .. ",  " ..
+			"OP:" .. tostring(node.operator) .. ",  " ..
+			"RIGHT:" .. tostring(node.right) .. ",  " ..
+			"IDENT:" .. tostring(node.identifier) .. ",  " ..
+			"VALUE_TYPE:" .. tostring(node.value.type)
+		)
 	end
 
 	print("\nInterpreting/evaluating AST...")
