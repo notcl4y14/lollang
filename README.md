@@ -31,7 +31,7 @@ Trust me, typing the directory everytime is a pain in the ass, so you better get
 so, i (PeurPioche) made a quick little launcher for it, so no more hassle of using cmd for the most part.
 
 # TODO
-- Fix the error calling lines that somehow got their `details` property have the same properties they have
+- ~~Fix the error calling lines that somehow got their `details` property have the same properties they have~~
 
 # CREDITS
 Thanks to CodePulse and tylerlaceby for the tutorials!
