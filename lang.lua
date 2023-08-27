@@ -436,10 +436,7 @@ function lang_Parser(tokens)
 			while self:notEof() and self:at().type ~= "Bracket" and self:at().value ~= "}" do
 				-- { key: val, key2: val }
 
-				local key = self:expectType(
-					"Ident",
-					lang_Error(self:at().pos[1]:clone(), "Expected an identifier, instead got " .. self:at().type)
-				)
+				local key = self:expectType("Ident", "Expected an identifier, instead got " .. self:at().type)
 
 				if not key then
 					return
@@ -461,27 +458,19 @@ function lang_Parser(tokens)
 						)
 					)
 				else
-					self:expect(
-						"Symbol", ":",
-						lang_Error(self:at().pos[1], "Expected ':', instead got '" .. self:at().value .. "'")
-					)
+					self:expect("Symbol", ":", "Expected ':', instead got '" .. self:at().value .. "'")
 
 					local value = self:parseExpr()
 					table.insert(properties, lang_Node_PropertyLiteral(key, value, {key.pos[1], value.pos[2]}))
 
 					if self:at().type ~= "Bracket" and self:at().value ~= "}" then
-						self:expect("Symbol", ",", lang_Error(
-							self:at().pos[1], "Expected comma or a closing bracket following property")
-						)
+						self:expect("Symbol", ",", "Expected comma or a closing bracket following property")
 					end
 				end
 
 			end
 
-			local rightBracket = self:expect(
-				"Bracket", "}",
-				lang_Error(self:at().pos[1]:clone(), "Expected '}', instead got '" .. tostring(self:at().value) .. "'")
-			)
+			local rightBracket = self:expect("Bracket", "}", "Expected '}', instead got '" .. tostring(self:at().value) .. "'")
 
 			if not rightBracket then
 				return
@@ -527,11 +516,11 @@ function lang_Parser(tokens)
 				return lang_Node_VarDeclaration(ident, nil, {keyword.pos, ident.pos})
 			end
 
-			self:expect("Symbol", "=", lang_Error(self:at().pos[1]:clone(), "Expected an equals sign after '" .. ident.value .. "'"))
+			self:expect("Symbol", "=", "Expected an equals sign after '" .. ident.value .. "'")
 
 			local declaration = lang_Node_VarDeclaration(ident.value, self:parseExpr(), {keyword.pos[1], ident.pos[2]})
 
-			self:expect("Symbol", ";", lang_Error(self:at().pos[1]:clone(), "Expected a semicolon at the end of the statement"))
+			self:expect("Symbol", ";", "Expected a semicolon at the end of the statement")
 
 			return declaration
 		end,
