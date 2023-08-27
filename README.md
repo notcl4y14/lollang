@@ -36,7 +36,4 @@ so, i (PeurPioche) made a quick little launcher for it, so no more hassle of usi
 # CREDITS
 Thanks to CodePulse and tylerlaceby for the tutorials!
 
-
-https://www.youtube.com/@CodePulse
-
-https://www.youtube.com/@tylerlaceby
+CodePulse: https://www.youtube.com/@CodePulse, tylerlaceby: https://www.youtube.com/@tylerlaceby
