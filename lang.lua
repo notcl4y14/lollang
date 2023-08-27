@@ -273,8 +273,8 @@ function lang_Node_PropertyLiteral(key, value, pos)
 	return node
 end
 
-function lang_Node_ObjectLiteral(properties, pos)
-	local node = lang_Node("ObjectLiteral", {properties = properties}, pos)
+function lang_Node_ObjectExpr(properties, pos)
+	local node = lang_Node("ObjectExpr", {properties = properties}, pos)
 	return node
 end
 
@@ -485,7 +485,7 @@ function lang_Parser(tokens)
 				return
 			end
 
-			return lang_Node_ObjectLiteral(properties, {leftBracket.pos[1], rightBracket[2]})
+			return lang_Node_ObjectExpr(properties, {leftBracket.pos[1], rightBracket[2]})
 		end,
 
 		parseAdditiveExpr = function(self)
@@ -562,6 +562,7 @@ function lang_Environment(parent)
 			end
 
 			self.variables[var] = value
+			return self:lookupVar(var)
 		end,
 
 		setVar = function(self, var, value)
@@ -570,6 +571,7 @@ function lang_Environment(parent)
 			end
 
 			self.variables[var] = value
+			return self:lookupVar(var)
 		end,
 
 		lookupVar = function(self, var)
@@ -627,6 +629,11 @@ function lang_Value_Bool(value)
 	return lang_Value("boolean", {value = value})
 end
 
+
+function lang_Value_Object(properties)
+	return lang_Value("object", {properties = properties})
+end
+
 --[[-------------------------------------------------------------------------]]
 --[[ EVALUATE/INTERPRETER ]]
 --[[-------------------------------------------------------------------------]]
@@ -662,6 +669,9 @@ function lang_evaluate(node, env)
 	elseif node.type == "AssignmentExpr" then
 		return lang_evaluate_assignment(node, env)
 
+	elseif node.type == "ObjectExpr" then
+		return lang_evaluate_objectExpr(node, env)
+
 	elseif node.type == "Program" then
 		return lang_evaluate_program(node, env)
 
@@ -673,11 +683,11 @@ function lang_evaluate(node, env)
 	end
 end
 
-function lang_evaluate_program(node, env)
+function lang_evaluate_program(program, env)
 	local lastEvaluated = lang_Value_Null()
 	local err
 
-	for _, stmt in pairs(node.body) do
+	for _, stmt in pairs(program.body) do
 		lastEvaluated, err = lang_evaluate(stmt, env)
 	end
 
@@ -737,6 +747,24 @@ function lang_evaluate_assignment(node, env)
 
 	env:setVar(node.assigne.name, lang_evaluate(node.value))
 	return env:lookupVar(node.assigne.name)
+end
+
+function lang_evaluate_objectExpr(obj, env)
+	local _object = lang_Value_Object({})
+
+	for key, val in pairs(obj.properties) do
+		local _value
+
+		if not val then
+			_value = env:lookupVar(key)
+		else
+			_value = lang_evaluate(val, env)
+		end
+
+		_object.properties[key] = _value
+	end
+
+	return _object
 end
 
 --[[-------------------------------------------------------------------------]]
