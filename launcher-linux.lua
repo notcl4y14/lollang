@@ -1,8 +1,7 @@
-os.execute("color A")
 function clearscreen()
     input = io.read()
     if input == "y" then
-        os.execute("cls")
+        os.execute("clear")
         run()
     elseif input == "n" then
         run()
