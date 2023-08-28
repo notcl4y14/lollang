@@ -1,10 +1,10 @@
 -- Automatically reads the file and returns its content, nil if the file doesn't exist
 -- Noticed by PeurPioche, remade by klei
 function readfile(filename)
-	-- Getting the file, nil if there's no file with that name
+	-- Getting the file, nil if the given file doesn't exist
 	local file = io.open(filename)
 	
-	-- Returns nil if no file is found
+	-- Return nil if the given file doesn't exist
 	if file == nil then
 		return nil
 	end
