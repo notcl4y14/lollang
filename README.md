@@ -37,6 +37,7 @@ im working on a overall better ver but yeah... lua errors.
 - Make the code cleaner
 - Set the `true` and `false` values to be non-string
 - finish the "new" ver of that damn launcher
+- add a file where we put the .lel files so everythings nice and clean (harder than it sounds.)
 
 # CREDITS
 Thanks to CodePulse and tylerlaceby for the tutorials!
