@@ -1,0 +1,3 @@
+[Ver 0.1.0]
+so, at the time i'm writing this, we added a launcher for your apps :D (located in the programs folder)
+i also made a new WIP ver of the launcher. its kinda broken but im working on fixing it
