@@ -29,7 +29,7 @@ Trust me, typing the directory everytime is a pain in the ass, so you better get
 ## [----------------------very USEFUL update-------------------]
 
 so, i (PeurPioche) made a quick little launcher called "can i haz launcher" for it, so no more hassle of using cmd for the most part.
-im working on a overall better ver but yeah... lua errors.
+and i also made a linux ver for it! (pretty sure it works on MAC too)
 
 # TODO
 - ~~Fix the error calling lines that somehow got their `details` property have the same properties they have~~
