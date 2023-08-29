@@ -32,6 +32,10 @@ function lang_Token(type, value, posLeft, posRight)
 	}
 end
 
+function lang_Token_match(token, type, value)
+	return token.type == type and token.value == value
+end
+
 --[[-------------------------------------------------------------------------]]
 --[[ POSITION ]]
 --[[-------------------------------------------------------------------------]]
@@ -298,6 +302,27 @@ function lang_Node_VarAssignment(assigne, value, pos)
 	return node
 end
 
+function lang_Node_CallExpr(args, calle, pos)
+	return {
+		type = "CallExpr",
+		args = args,
+		calle = calle,
+
+		pos = pos
+	}
+end
+
+function lang_Node_MemberExpr(object, property, computed, pos)
+	return {
+		type = "MemberExpr",
+		object = object,
+		property = property,
+		computed = computed,
+
+		pos = pos
+	}
+end
+
 --[[-------------------------------------------------------------------------]]
 --[[ PARSER ]]
 --[[-------------------------------------------------------------------------]]
@@ -352,6 +377,10 @@ function lang_Parser(tokens)
 		end,
 
 		notEof = function(self)
+			if not self.tokens[1] then
+				return false
+			end
+
 			return self.tokens[1].type ~= "Eof"
 		end,
 
@@ -387,9 +416,43 @@ function lang_Parser(tokens)
 			end
 		end,
 
+		parseVarDeclaration = function(self)
+			local keyword = self:yum()
+			local ident = self:expectType("Ident", "Expected an identifier after the let | var keyword")
+
+			if not ident then
+				return
+			end
+
+			if lang_Token_match(self:at(), "Symbol", ";") then
+				self:yum()
+				return lang_Node_VarDeclaration(ident, nil, {keyword.pos, ident.pos})
+			end
+
+			self:expect("Symbol", "=", "Expected an equals sign after '" .. ident.value .. "'")
+
+			local declaration = lang_Node_VarDeclaration(ident.value, self:parseExpr(), {keyword.pos[1], ident.pos[2]})
+
+			self:expect("Symbol", ";", "Expected a semicolon at the end of the statement")
+
+			return declaration
+		end,
+
 		parseExpr = function(self)
 			-- return self:parseAdditiveExpr()
 			return self:parseAssignmentExpr()
+		end,
+
+		parseAssignmentExpr = function(self)
+			local left = self:parseObjectExpr()
+
+			if self:notEof() and self:at().type == "Symbol" and self:at().value == "=" then
+				self:yum()
+				local value = self:parseAssignmentExpr()
+				return lang_Node_VarAssignment(left, value, {left.pos[1], value.pos[2]})
+			end
+
+			return left
 		end,
 
 		parsePrimaryExpr = function(self)
@@ -424,7 +487,7 @@ function lang_Parser(tokens)
 				self:yum()
 				local value = self:parseExpr()
 				local token = self:at()
-				self:expect("Paren", ")", lang_Error(token.pos[1]:clone(), "Expected ')', instead got '" .. token.value .. "'"))
+				self:expect("Paren", ")", "Expected ')', instead got '" .. token.value .. "'")
 				return value
 
 			else
@@ -501,7 +564,7 @@ function lang_Parser(tokens)
 		end,
 
 		parseMultiplicativeExpr = function(self)
-			local left = self:parsePrimaryExpr()
+			local left = self:parseCallMemberExpr()
 
 			while self:at().value == "*" or self:at().value == "/" or self:at().value == "%" do
 				local operator = self:yum().value
@@ -512,38 +575,105 @@ function lang_Parser(tokens)
 			return left
 		end,
 
-		parseVarDeclaration = function(self)
-			local keyword = self:yum()
-			local ident = self:expectType("Ident", "Expected an identifier after the let | var keyword")
+		parseCallMemberExpr = function(self)
+			local member = self:parseMemberExpr()
+			local token = self:at()
 
-			if not ident then
+			if lang_Token_match(token, "Paren", "(") then
+				return self:parseCallExpr(member)
+			end
+
+			return member
+		end,
+
+		parseCallExpr = function(self, calle)
+			local callExpr = lang_Node_CallExpr(
+				calle,
+				self:parseArgs(),
+				calle.pos)
+			local token = self:at()
+
+			if lang_Token_match(token, "Paren", "(") then
+				callExpr = self:parseCallExpr(callExpr)
+			end
+
+			return callExpr
+		end,
+
+		parseArgs = function(self)
+			local leftParen = self:expect("Paren", "(", "Expected '('")
+
+			if not leftParen then
 				return
 			end
 
-			if self:at().type == "Symbol" and self:at().value == ";" then
-				self:yum()
-				return lang_Node_VarDeclaration(ident, nil, {keyword.pos, ident.pos})
+			local token = self:at()
+			local args = nil
+
+			if lang_Token_match(token, "Paren", ")") then
+				args = {}
+			else
+				args = self:parseArgumentsList()
 			end
 
-			self:expect("Symbol", "=", "Expected an equals sign after '" .. ident.value .. "'")
+			local rightParen = self:expect("Paren", ")", "Expected ')'")
 
-			local declaration = lang_Node_VarDeclaration(ident.value, self:parseExpr(), {keyword.pos[1], ident.pos[2]})
+			if not rightParen then
+				return
+			end
 
-			self:expect("Symbol", ";", "Expected a semicolon at the end of the statement")
-
-			return declaration
+			return args
 		end,
 
-		parseAssignmentExpr = function(self)
-			local left = self:parseObjectExpr()
+		parseArgumentsList = function(self)
+			local args = { self:parseAssignmentExpr() }
 
-			if self:notEof() and self:at().type == "Symbol" and self:at().value == "=" then
-				self:yum()
-				local value = self:parseAssignmentExpr()
-				return lang_Node_VarAssignment(left, value, {left.pos[1], value.pos[2]})
+			while self:notEof() and lang_Token_match(self:at(), "Symbol", ",") and self:yum() do
+				table.insert(args, self:parseAssignmentExpr())
 			end
 
-			return left
+			return args
+		end,
+
+		parseMemberExpr = function(self)
+			local object = self:parsePrimaryExpr()
+
+			while
+				lang_Token_match(self:at(), "Symbol", ".") or
+				lang_Token_match(self:at(), "Bracket", "[")
+			do
+				local operator = self:yum()
+				local property
+				local computed
+
+				-- Non-computed values: obj.x
+				if lang_Token_match(operator, "Symbol", ".") then
+					computed = false
+					-- Getting an identifier
+					property = self:parsePrimaryExpr()
+
+					-- Check if a property is an identifier
+					if property.type ~= "Identifier" then
+						self.error = lang_Error(
+							property.pos[1],
+							"Expected an identifier after '.', got " .. property.type)
+						return
+					end
+				else -- Computed values: obj["x"]
+					computed = true
+					property = self:parseExpr()
+
+					local rightBracket = self:expect("Bracket", "]", "Expected ']', got " .. property.type)
+
+					if not rightBracket then
+						return
+					end
+				end
+
+				local object = lang_Node_MemberExpr(object, property, computed)
+			end
+
+			return object
 		end
 	}
 end
