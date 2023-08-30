@@ -278,7 +278,7 @@ function lang_Node_PropertyLiteral(key, value, pos)
 end
 
 function lang_Node_ObjectExpr(properties, pos)
-	local node = lang_Node("ObjectExpr", {properties = properties}, pos)
+	local node = lang_Node("ObjectLiteral", {properties = properties}, pos)
 	return node
 end
 
@@ -588,14 +588,16 @@ function lang_Parser(tokens)
 
 		parseCallExpr = function(self, calle)
 			local callExpr = lang_Node_CallExpr(
-				calle,
 				self:parseArgs(),
-				calle.pos)
+				calle,
+				{calle.pos})
 			local token = self:at()
 
 			if lang_Token_match(token, "Paren", "(") then
 				callExpr = self:parseCallExpr(callExpr)
 			end
+
+			callExpr.pos[2] = self:at().pos[2]:clone()
 
 			return callExpr
 		end,
@@ -636,6 +638,7 @@ function lang_Parser(tokens)
 		end,
 
 		parseMemberExpr = function(self)
+			local posStart = self:at().pos[1]:clone()
 			local object = self:parsePrimaryExpr()
 
 			while
@@ -670,7 +673,7 @@ function lang_Parser(tokens)
 					end
 				end
 
-				local object = lang_Node_MemberExpr(object, property, computed)
+				local object = lang_Node_MemberExpr(object, property, computed, {posStart, self:at().pos[2]:clone()})
 			end
 
 			return object
@@ -739,6 +742,13 @@ function lang_Value(type, values)
 	return val
 end
 
+function lang_Value_String(value)
+	return {
+		type = "string",
+		value = value
+	}
+end
+
 function lang_Value_Number(value)
 	return lang_Value("number", {value = value})
 end
@@ -759,9 +769,15 @@ function lang_Value_Bool(value)
 	return lang_Value("boolean", {value = value})
 end
 
-
 function lang_Value_Object(properties)
 	return lang_Value("object", {properties = properties})
+end
+
+function lang_Value_FunctionCall(call)
+	return {
+		type = "function-call",
+		call = call
+	}
 end
 
 --[[-------------------------------------------------------------------------]]
@@ -786,7 +802,10 @@ function lang_evaluate(node, env)
 		end
 
 		return var
-		
+	
+	elseif node.type == "StringLiteral" then
+		return lang_Value_String(node.value)
+	
 	elseif node.type == "NumericLiteral" then
 		return lang_Value_Number(node.value)
 
@@ -799,8 +818,11 @@ function lang_evaluate(node, env)
 	elseif node.type == "AssignmentExpr" then
 		return lang_evaluate_assignment(node, env)
 
-	elseif node.type == "ObjectExpr" then
+	elseif node.type == "ObjectLiteral" then
 		return lang_evaluate_objectExpr(node, env)
+
+	elseif node.type == "CallExpr" then
+		return lang_evaluate_callExpr(node, env)
 
 	elseif node.type == "Program" then
 		return lang_evaluate_program(node, env)
@@ -897,11 +919,33 @@ function lang_evaluate_objectExpr(obj, env)
 	return _object
 end
 
+function lang_evaluate_callExpr(callExpr, env)
+	local args = {}
+
+	-- Iterating through each argument and evaluate them
+	for key, value in pairs(callExpr.args) do
+		args[key] = lang_evaluate(value, env)
+	end
+
+	local func = lang_evaluate(callExpr.calle, env)
+
+	if func.type ~= "function-call" then
+		return nil, lang_Error(callExpr.pos[1]:clone(), "Cannot call a value that is not a function: " .. func.type)
+	end
+
+	-- Writing this (from the tylacerby's tutorial :P) I started to figure out how to make the return statements
+	local result = func:call(args, env)
+	return result
+end
+
 --[[-------------------------------------------------------------------------]]
 --[[ RUN ]]
 --[[-------------------------------------------------------------------------]]
-function lang_run(filename, code)
-	print("\nMaking tokens...")
+function lang_run(filename, code, showLexer, showParser)
+	if showLexer then
+		print("\nMaking tokens...")
+	end
+
 	local lexer = lang_Lexer(filename, code)
 	local tokens, err = lexer:makeTokens()
 
@@ -910,17 +954,22 @@ function lang_run(filename, code)
 		return
 	end
 
-	for _, token in pairs(tokens) do
-		local type = token.type or "unknown"
-		local value = token.value or "unknown"
-		local line1 = token.pos[1].line or "unknown"
-		local column1 = token.pos[1].column or "unknown"
-		local line2 = token.pos[2].line or "unknown"
-		local column2 = token.pos[2].column or "unknown"
-		print(type, value, line1 .. ":" .. column1, line2 .. ":" .. column2)
+	if showLexer then
+		for _, token in pairs(tokens) do
+			local type = token.type or "unknown"
+			local value = token.value or "unknown"
+			local line1 = token.pos[1].line or "unknown"
+			local column1 = token.pos[1].column or "unknown"
+			local line2 = token.pos[2].line or "unknown"
+			local column2 = token.pos[2].column or "unknown"
+			print(type, value, line1 .. ":" .. column1, line2 .. ":" .. column2)
+		end
 	end
 
-	print("\nParsing tokens...")
+	if showParser then
+		print("\nParsing tokens...")
+	end
+
 	local parser = lang_Parser(tokens)
 	local ast, err = parser:makeAST()
 
@@ -929,32 +978,48 @@ function lang_run(filename, code)
 		return
 	end
 
-	for _, node in pairs(ast.body) do
-		print(
-			"TYPE:" .. tostring(node.type) .. ",  " ..
-			"VALUE:" .. tostring(node.value) .. ",  " ..
-			"NAME:" .. tostring(node.name) .. ",  " ..
-			"LEFT:" .. tostring(node.left) .. ",  " ..
-			"OP:" .. tostring(node.operator) .. ",  " ..
-			"RIGHT:" .. tostring(node.right) .. ",  " ..
-			"IDENT:" .. tostring(node.identifier) .. ",  " ..
-			"VALUE_TYPE:" .. tostring(node.value.type)
-		)
+	if showParser then
+		for _, node in pairs(ast.body) do
+			local value_type
+
+			if type(node.value) == "table" then
+				value_type = node.value.type
+			end
+
+			print(
+				"TYPE:" .. tostring(node.type) .. ",  " ..
+				"VALUE:" .. tostring(node.value) .. ",  " ..
+				"NAME:" .. tostring(node.name) .. ",  " ..
+				"LEFT:" .. tostring(node.left) .. ",  " ..
+				"OP:" .. tostring(node.operator) .. ",  " ..
+				"RIGHT:" .. tostring(node.right) .. ",  " ..
+				"IDENT:" .. tostring(node.identifier) .. ",  " ..
+				"VALUE_TYPE:" .. tostring(value_type)
+			)
+		end
 	end
 
-	print("\nInterpreting/evaluating AST...")
+	-- print("\nInterpreting/evaluating AST...")
 	local env = lang_Environment()
-	env:newVar("lol", lang_Value_Number(10))
+
+	-- Declaring built-in variables and functions
+	env:newVar("print", lang_Value_FunctionCall(function(self, args, env)
+		local value = args[1]
+		print(#args, #value)
+		io.write(tostring(value) .. "\n")
+		return lang_Value_Null()
+	end))
+
 	local result, err = lang_evaluate(ast, env)
-	print(result, err)
+	-- print(result, err)
 
 	if err then
 		print(err:asString())
 		return
 	end
 
-	for _, value in pairs(result) do
-		print(_, value)
-	end
+	-- for _, value in pairs(result) do
+		-- print(_, value)
+	-- end
 	-- print(result)
 end

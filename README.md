@@ -38,6 +38,9 @@ and i also made a linux ver for it! (pretty sure it works on MAC too)
 - Set the `true` and `false` values to be non-string
 - ~~finish the "new" ver of that damn launcher~~
 - add a file where we put the .lel files so everythings nice and clean (harder than it sounds.)
+- Shell/REPL
+- ~~Fix the error that the interpreter gets an unknown node~~
+- Fix the lang_evaluate_callExpr return an empty table to the function
 
 # CREDITS
 Thanks to CodePulse and tylerlaceby for the tutorials!
