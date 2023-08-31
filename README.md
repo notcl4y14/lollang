@@ -14,7 +14,7 @@ This was made in lua for windows, so if you're a linux or mac user... well, idk 
 2-Once in Notepad++, go to "File" and "Open containing folder" and choose "cmd".
 3-Type "lua main.lua [filename].lel"
 
-and voila, dont worry if the cmd turns green, its intended, and sadly, this language is in very early developpment so theres no such functions as "print()" etc.
+and voila, dont worry if the cmd turns green, its intended.
 
 
 ## [--------------------if you DONT have notepad++----------------]
@@ -34,7 +34,7 @@ and i also made a linux ver for it! (pretty sure it works on MAC too)
 # TODO
 - ~~Fix the error calling lines that somehow got their `details` property have the same properties they have~~
 - Add the comments
-- Make the code cleaner
+- Make the code kleiner :trollface:
 - Set the `true` and `false` values to be non-string
 - ~~finish the "new" ver of that damn launcher~~
 - add a file where we put the .lel files so everythings nice and clean (harder than it sounds.)
