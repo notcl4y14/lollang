@@ -14,7 +14,7 @@ This was made in lua for windows, so if you're a linux or mac user... well, idk 
 2-Once in Notepad++, go to "File" and "Open containing folder" and choose "cmd".
 3-Type "lua main.lua [filename].lel"
 
-and voila, dont worry if the cmd turns green, its intended, and sadly, this language is in very early developpment so theres no such functions as "print()" etc.
+and voila, dont worry if the cmd turns green, its intended.
 
 
 ## [--------------------if you DONT have notepad++----------------]
