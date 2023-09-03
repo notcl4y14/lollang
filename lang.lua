@@ -921,10 +921,15 @@ end
 
 function lang_evaluate_callExpr(callExpr, env)
 	local args = {}
+	local err
 
 	-- Iterating through each argument and evaluate them
 	for key, value in pairs(callExpr.args) do
-		args[key] = lang_evaluate(value, env)
+		args[key], err = lang_evaluate(value, env)
+
+		if err then
+			return nil, err
+		end
 	end
 
 	local func = lang_evaluate(callExpr.calle, env)
@@ -1005,8 +1010,7 @@ function lang_run(filename, code, showLexer, showParser)
 	-- Declaring built-in variables and functions
 	env:newVar("print", lang_Value_FunctionCall(function(self, args, env)
 		local value = args[1]
-		print(#args, #value)
-		io.write(tostring(value) .. "\n")
+		print(value.value)
 		return lang_Value_Null()
 	end))
 

@@ -40,7 +40,7 @@ and i also made a linux ver for it! (pretty sure it works on MAC too)
 - add a file where we put the .lel files so everythings nice and clean (harder than it sounds.)
 - Shell/REPL
 - ~~Fix the error that the interpreter gets an unknown node~~
-- Fix the lang_evaluate_callExpr return an empty `arguments` table to the function
+- ~~Fix the lang_evaluate_callExpr return an empty `arguments` table to the function~~ (just put `.value` to `value` lol)
 
 # CREDITS
 Thanks to CodePulse and tylerlaceby for the tutorials!
