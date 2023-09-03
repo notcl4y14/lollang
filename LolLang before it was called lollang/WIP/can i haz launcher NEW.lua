@@ -27,3 +27,4 @@ askfile()
 print("clear screen? (y/n)")
 clearscreen()
 io.read()
+end 

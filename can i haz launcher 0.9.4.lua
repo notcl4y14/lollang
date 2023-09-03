@@ -15,9 +15,9 @@ end
 function askfile()
     file = io.read()
     if file == "" then
-        print("Input a real file and stop wasting my time")
+        print("Input a file and stop wasting my time")
         askfile()
-		elseif file == "help" then
+		elseif file == "?help" then
 		print[[this is a small project, dont expect much for now, this has only been tested on windows and lunbutu (a linux distro)!]]
 		askfile()
     end
@@ -28,7 +28,7 @@ function run()
 end
 
 while true do
-    print("Ayo, what .lel file ya wanna run? (type help for info)")
+    print("Ayo, what .lel file ya wanna run? (type ?help for info)")
     askfile()
     print("Clear screen? (y/n)")
     clearscreen()
