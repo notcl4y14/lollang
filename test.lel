@@ -1,1 +1,7 @@
-print("Hello World!")
+println("Hello World!")
+print("> ")
+let x = readln();
+println(x)
+print("> ")
+let y = readln();
+println(y)

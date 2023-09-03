@@ -827,10 +827,16 @@ function lang_evaluate(node, env)
 	elseif node.type == "Program" then
 		return lang_evaluate_program(node, env)
 
+	-- Values
+	elseif type(node) == "string" then
+		return lang_Value_String(node)
+
 	else
 		return {}, lang_Error(
 			node.pos[1],
-			"This AST node has not been setup for interpretation: " .. node.type .. "; Yell at programmer to fix this!"
+			-- "This AST node has not been setup for interpretation: " .. node.type .. "; Yell at programmer to fix this!"
+			-- The sentence at the end is PeurPioche's idea :P
+			"This AST node has not been setup for interpretation: " .. node.type .. "; Please say the following sentence to a dev: fix your bullshit"
 		)
 	end
 end
@@ -897,7 +903,7 @@ function lang_evaluate_assignment(node, env)
 		return nil, lang_Error(node.pos[1][1], "Tried to assign an undeclared variable")
 	end
 
-	env:setVar(node.assigne.name, lang_evaluate(node.value))
+	env:setVar(node.assigne.name, lang_evaluate(node.value, env))
 	return env:lookupVar(node.assigne.name)
 end
 
@@ -1008,10 +1014,22 @@ function lang_run(filename, code, showLexer, showParser)
 	local env = lang_Environment()
 
 	-- Declaring built-in variables and functions
-	env:newVar("print", lang_Value_FunctionCall(function(self, args, env)
-		local value = args[1]
-		print(value.value)
+	env:newVar("println", lang_Value_FunctionCall(function(self, args, env)
+		local value = args[1].value
+		print(value)
 		return lang_Value_Null()
+	end))
+
+	env:newVar("print", lang_Value_FunctionCall(function(self, args, env)
+		local value = args[1].value
+		io.write(value)
+		io.flush()
+		return lang_Value_Null()
+	end))
+
+	env:newVar("readln", lang_Value_FunctionCall(function(self, args, env)
+		local value = lang_evaluate(io.read())
+		return value
 	end))
 
 	local result, err = lang_evaluate(ast, env)
