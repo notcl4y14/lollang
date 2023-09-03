@@ -2,6 +2,6 @@ println("Hello World!")
 print("> ")
 let x = readln();
 println(x)
-print("> ")
-let y = readln();
-println(y)
+
+let arr = [1, 2, 3];
+println(arr)

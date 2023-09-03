@@ -282,6 +282,14 @@ function lang_Node_ObjectExpr(properties, pos)
 	return node
 end
 
+function lang_Node_ArrayExpr(values, pos)
+	return {
+		type = "ArrayLiteral",
+		values = values,
+		pos = pos
+	}
+end
+
 function lang_Node_BinaryExpr(left, operator, right, pos)
 	local node = lang_Node("BinaryExpr", {left = left, operator = operator, right = right}, pos)
 	return node
@@ -497,7 +505,9 @@ function lang_Parser(tokens)
 		end,
 
 		parseObjectExpr = function(self)
-			if self:at().type ~= "Bracket" and self:at().value ~= "{" then
+			if lang_Token_match(self:at(), "Bracket", "[") then
+				return self:parseArrayExpr()
+			elseif self:at().type ~= "Bracket" and self:at().value ~= "{" then
 				return self:parseAdditiveExpr()
 			end
 
@@ -549,6 +559,34 @@ function lang_Parser(tokens)
 			end
 
 			return lang_Node_ObjectExpr(properties, {leftBracket.pos[1], rightBracket[2]})
+		end,
+
+		parseArrayExpr = function(self)
+			local leftBracket = self:yum()
+			local values = {}
+
+			while self:notEof() and self:at().type ~= "Bracket" and self:at().value ~= "]" do
+				-- [ val, val2 ]
+
+				local value = self:yum()
+
+				if lang_Token_match(self:at(), "Symbol", ",") or lang_Token_match(self:at(), "Symbol", ";") then
+					table.insert(values, self:parseExpr(value))
+				else
+					if self:at().type ~= "Bracket" and self:at().value ~= "]" then
+						self:expect("Symbol", ",", "Expected comma or a closing bracket following property")
+					end
+				end
+
+			end
+
+			local rightBracket = self:expect("Bracket", "]", "Expected ']', instead got '" .. tostring(self:at().value) .. "'")
+
+			if not rightBracket then
+				return
+			end
+
+			return lang_Node_ArrayExpr(values, {leftBracket.pos[1], rightBracket[2]})
 		end,
 
 		parseAdditiveExpr = function(self)
@@ -773,6 +811,13 @@ function lang_Value_Object(properties)
 	return lang_Value("object", {properties = properties})
 end
 
+function lang_Value_Array(values)
+	return {
+		type = "array",
+		values = values
+	}
+end
+
 function lang_Value_FunctionCall(call)
 	return {
 		type = "function-call",
@@ -820,6 +865,9 @@ function lang_evaluate(node, env)
 
 	elseif node.type == "ObjectLiteral" then
 		return lang_evaluate_objectExpr(node, env)
+
+	elseif node.type == "ArrayLiteral" then
+		return lang_evaluate_arrayExpr(node, env)
 
 	elseif node.type == "CallExpr" then
 		return lang_evaluate_callExpr(node, env)
@@ -925,6 +973,24 @@ function lang_evaluate_objectExpr(obj, env)
 	return _object
 end
 
+function lang_evaluate_arrayExpr(arr, env)
+	local array = lang_Value_Array({})
+
+	for key, val in pairs(arr.values) do
+		local _value
+
+		if not val then
+			_value = env:lookupVar(key)
+		else
+			_value = lang_evaluate(val, env)
+		end
+
+		array.values[key] = _value
+	end
+
+	return array
+end
+
 function lang_evaluate_callExpr(callExpr, env)
 	local args = {}
 	local err
@@ -947,6 +1013,30 @@ function lang_evaluate_callExpr(callExpr, env)
 	-- Writing this (from the tylacerby's tutorial :P) I started to figure out how to make the return statements
 	local result = func:call(args, env)
 	return result
+end
+
+function lang_evaluate_getValue(value, env)
+	if value.type == "string" or value.type == "number" then
+		return value.value
+	elseif value.type == "identifier" then
+		return lang_evaluate(value, env).name
+	elseif value.type == "array" then
+		local str = "["
+
+		for key, val in pairs(value.values) do
+			str = str .. tostring(lang_evaluate_getValue(val, env))
+
+			if key ~= #value.values then
+				str = str .. ","
+			end
+		end
+
+		str = str .. "]"
+
+		return str
+	else
+		return lang_Value_Undefined()
+	end
 end
 
 --[[-------------------------------------------------------------------------]]
@@ -1015,13 +1105,13 @@ function lang_run(filename, code, showLexer, showParser)
 
 	-- Declaring built-in variables and functions
 	env:newVar("println", lang_Value_FunctionCall(function(self, args, env)
-		local value = args[1].value
+		local value = lang_evaluate_getValue(args[1], env)
 		print(value)
 		return lang_Value_Null()
 	end))
 
 	env:newVar("print", lang_Value_FunctionCall(function(self, args, env)
-		local value = args[1].value
+		local value = lang_evaluate_getValue(args[1], env)
 		io.write(value)
 		io.flush()
 		return lang_Value_Null()
