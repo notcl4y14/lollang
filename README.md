@@ -36,12 +36,15 @@ and i also made a linux ver for it! (pretty sure it works on MAC too)
 - Add the comments
 - Make the code kleiner :trollface:
 - Set the `true` and `false` values to be non-string
+	+ And the `null` and `undefined` values too
 - ~~finish the "new" ver of that damn launcher~~
 - add a file where we put the .lel files so everythings nice and clean (harder than it sounds.)
 - Shell/REPL
 - ~~Fix the error that the interpreter gets an unknown node~~
 - ~~Fix the lang_evaluate_callExpr return an empty `arguments` table to the function~~ (just put `.value` to `value` lol)
-- Finish the array node or rewrite it
+- ~~Finish the array node or rewrite it~~
+- Rewrite all the node functions to return a manually-made table instead of letting the `lang_Node` function do that
+	+ Wrote that when did the same to runtime values
 
 # CREDITS
 Thanks to CodePulse and tylerlaceby for the tutorials!

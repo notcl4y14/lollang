@@ -441,7 +441,7 @@ function lang_Parser(tokens)
 
 			local declaration = lang_Node_VarDeclaration(ident.value, self:parseExpr(), {keyword.pos[1], ident.pos[2]})
 
-			self:expect("Symbol", ";", "Expected a semicolon at the end of the statement")
+			-- self:expect("Symbol", ";", "Expected a semicolon at the end of the statement")
 
 			return declaration
 		end,
@@ -498,6 +498,11 @@ function lang_Parser(tokens)
 				self:expect("Paren", ")", "Expected ')', instead got '" .. token.value .. "'")
 				return value
 
+			elseif token.type == "Symbol" then
+				if token.value == ";" then
+					self:yum()
+				end
+
 			else
 				self.error = lang_Error(token.pos[1]:clone(), "This AST node has not been set up: " .. token.type .. "; Yell at programmer to fix this!")
 				return self:yum()
@@ -506,6 +511,7 @@ function lang_Parser(tokens)
 
 		parseObjectExpr = function(self)
 			if lang_Token_match(self:at(), "Bracket", "[") then
+				-- print("FOUND ARRAY!")
 				return self:parseArrayExpr()
 			elseif self:at().type ~= "Bracket" and self:at().value ~= "{" then
 				return self:parseAdditiveExpr()
@@ -568,17 +574,26 @@ function lang_Parser(tokens)
 			while self:notEof() and self:at().type ~= "Bracket" and self:at().value ~= "]" do
 				-- [ val, val2 ]
 
-				local value = self:yum()
+				local value = self:parsePrimaryExpr(self:at())
+				table.insert(values, value)
 
-				if lang_Token_match(self:at(), "Symbol", ",") or lang_Token_match(self:at(), "Symbol", ";") then
-					table.insert(values, self:parseExpr(value))
-				else
-					if self:at().type ~= "Bracket" and self:at().value ~= "]" then
-						self:expect("Symbol", ",", "Expected comma or a closing bracket following property")
+				if not lang_Token_match(self:at(), "Symbol", ",") and not lang_Token_match(self:at(), "Symbol", ";") then
+					if lang_Token_match(self:at(), "Bracket", "]") then
+						break
 					end
+
+					local symbol = self:yum()
+					self.error = lang_Error(symbol.pos[1]:clone(), "Expected comma or a closing bracket following value")
+					return
 				end
 
+				self:yum()
+
 			end
+
+			-- for key, value in pairs(values) do
+				-- print(": " .. key, value.type, value.value)
+			-- end
 
 			local rightBracket = self:expect("Bracket", "]", "Expected ']', instead got '" .. tostring(self:at().value) .. "'")
 
@@ -762,24 +777,6 @@ end
 --[[-------------------------------------------------------------------------]]
 --[[ VALUES ]]
 --[[-------------------------------------------------------------------------]]
-function lang_Value(type, values)
-	local val = {
-		type = type
-	}
-
-	if not values or values == {} then
-		return val
-	end
-
-	for key, _val in pairs(values) do
-		if not val[key] then
-			val[key] = _val
-		end
-	end
-
-	return val
-end
-
 function lang_Value_String(value)
 	return {
 		type = "string",
@@ -788,27 +785,45 @@ function lang_Value_String(value)
 end
 
 function lang_Value_Number(value)
-	return lang_Value("number", {value = value})
+	return {
+		type = "number",
+		value = value
+	}
 end
 
 function lang_Value_Ident(name)
-	return lang_Value("identifier", {name = name})
+	return {
+		type = "identifier",
+		name = name
+	}
 end
 
 function lang_Value_Null()
-	return lang_Value("null", {value = "null"})
+	return {
+		type = "null",
+		value = "null"
+	}
 end
 
 function lang_Value_Undefined()
-	return lang_Value("undefined", {value = "undefined"})
+	return {
+		type = "undefined",
+		value = "undefined"
+	}
 end
 
 function lang_Value_Bool(value)
-	return lang_Value("boolean", {value = value})
+	return {
+		type = "boolean",
+		value = value
+	}
 end
 
 function lang_Value_Object(properties)
-	return lang_Value("object", {properties = properties})
+	return {
+		type = "object",
+		properties = properties
+	}
 end
 
 function lang_Value_Array(values)
@@ -878,6 +893,9 @@ function lang_evaluate(node, env)
 	-- Values
 	elseif type(node) == "string" then
 		return lang_Value_String(node)
+
+	elseif type(node) == "number" then
+		return lang_Value_Number(node)
 
 	else
 		return {}, lang_Error(
@@ -1015,8 +1033,12 @@ function lang_evaluate_callExpr(callExpr, env)
 	return result
 end
 
-function lang_evaluate_getValue(value, env)
-	if value.type == "string" or value.type == "number" then
+function lang_evaluate_getValue(value, env, str)
+	if value.type == "string" or value.type == "number" or value.type == "null" or value.type == "undefined" or value.type == "boolean" then
+		if value.type == "string" and str then
+			return '"' .. value.value .. '"'
+		end
+
 		return value.value
 	elseif value.type == "identifier" then
 		return lang_evaluate(value, env).name
@@ -1024,10 +1046,10 @@ function lang_evaluate_getValue(value, env)
 		local str = "["
 
 		for key, val in pairs(value.values) do
-			str = str .. tostring(lang_evaluate_getValue(val, env))
+			str = str .. tostring(lang_evaluate_getValue(val, env, true))
 
 			if key ~= #value.values then
-				str = str .. ","
+				str = str .. ", "
 			end
 		end
 

@@ -5,3 +5,5 @@ println(x)
 
 let arr = [1, 2, 3];
 println(arr)
+var arr2 = ["lol", 123, true]
+println(arr2)
